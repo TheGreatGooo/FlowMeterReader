@@ -296,7 +296,6 @@ def processFrame(img, aproxIndicatorLength=600):
                 if guageIndicatorSize[2] > indicatedWidth:
                     indicatedPixel = guageIndicatorSize[1]
                     indicatedWidth = guageIndicatorSize[2]
-                print(f"x= {xMid} y={yMid} {guageIndicatorSize[2]}")
         percent = ((indicatedPixel - guageTrack["yBottom"]) * -100) / (
             guageTrack["yBottom"] - guageTrack["yTop"]
         )
@@ -339,6 +338,8 @@ def main():
                     for i, gt in enumerate(guage_tracks)
                 ]
             )
+            for i, gt in enumerate(guage_tracks):
+                print(f"guage: {id} percent:{str(gt.get("percent", None))}")
             client.publish(args.topic, payload)
             time.sleep(args.interval)
     except KeyboardInterrupt:
