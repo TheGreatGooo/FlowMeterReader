@@ -338,7 +338,7 @@ def main():
                     for i, gt in enumerate(guage_tracks)
                 ]
             )
-            print(f"{str(round(guage_tracks[0].get("percent", None)))},{str(round(guage_tracks[1].get("percent", None)))},{str(round(guage_tracks[2].get("percent", None)))}")
+            print(f"{str(round(guage_tracks[0].get("percent", None),2))},{str(round(guage_tracks[1].get("percent", None),2))},{str(round(guage_tracks[2].get("percent", None),2))}")
             client.publish(args.topic, payload)
             time.sleep(args.interval)
     except KeyboardInterrupt:
