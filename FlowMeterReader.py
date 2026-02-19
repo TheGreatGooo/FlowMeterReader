@@ -2,6 +2,10 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 from qreader import QReader
+import argparse
+import time
+import json
+import paho.mqtt.client as mqtt
 
 def does_range_overlap(startX1,endX1,startX2,endX2):
     if(startX1<=startX2):
@@ -207,3 +211,41 @@ def processFrame(img, aproxIndicatorLength=600):
         percent=(((indicatedPixel-guageTrack["yBottom"])*-100)/(guageTrack["yBottom"]-guageTrack["yTop"]))
         guageTrack["percent"] = percent
     return guageTracks
+
+def main():
+    parser = argparse.ArgumentParser(description="FlowMeterReader RTSP to MQTT")
+    parser.add_argument("--rtsp", required=True, help="RTSP stream URL")
+    parser.add_argument("--interval", type=float, default=1.0, help="Interval between frames in seconds")
+    parser.add_argument("--broker", required=True, help="MQTT broker address")
+    parser.add_argument("--port", type=int, default=1883, help="MQTT broker port")
+    parser.add_argument("--topic", required=True, help="MQTT topic to publish gauge percentages")
+    args = parser.parse_args()
+
+    client = mqtt.Client()
+    client.connect(args.broker, args.port, 60)
+    client.loop_start()
+
+    cap = cv.VideoCapture(args.rtsp)
+    if not cap.isOpened():
+        print("Failed to open RTSP stream")
+        return
+
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to read frame")
+                break
+            guage_tracks = processFrame(frame)
+            payload = json.dumps([{"id": i, "percent": gt.get("percent", None)} for i, gt in enumerate(guage_tracks)])
+            client.publish(args.topic, payload)
+            time.sleep(args.interval)
+    except KeyboardInterrupt:
+        print("Interrupted by user")
+    finally:
+        cap.release()
+        client.loop_stop()
+        client.disconnect()
+
+if __name__ == "__main__":
+    main()
