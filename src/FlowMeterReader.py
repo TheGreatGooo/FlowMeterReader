@@ -330,7 +330,7 @@ def main():
             guage_tracks = processFrame(frame)
             payload = json.dumps(
                 [
-                    {"id": i, "percent": gt.get("percent", None)}
+                    {"id": i, "percent": str(gt.get("percent", None))}
                     for i, gt in enumerate(guage_tracks)
                 ]
             )
