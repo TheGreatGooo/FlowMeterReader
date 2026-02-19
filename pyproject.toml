@@ -13,16 +13,16 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+    "opencv-python",
+    "matplotlib",
+    "qreader",
+    "paho-mqtt"
+]
 
 [project.scripts]
 flowmeterreader = "FlowMeterReader:main"
-
-[project.dependencies]
-opencv-python = "*"
-numpy = "*"
-matplotlib = "*"
-qreader = "*"
-paho-mqtt = "*"
 
 [build-system]
 requires = ["setuptools", "wheel"]
