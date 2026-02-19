@@ -334,6 +334,7 @@ def main():
                     for i, gt in enumerate(guage_tracks)
                 ]
             )
+            print(f"guage: {id} percent:{str(gt.get("percent", None))}")
             client.publish(args.topic, payload)
             time.sleep(args.interval)
     except KeyboardInterrupt:
