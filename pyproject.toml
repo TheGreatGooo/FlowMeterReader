@@ -12,6 +12,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent"
 ]
+requires-python = ">=3.8"
 
 [project.scripts]
 flowmeterreader = "FlowMeterReader:main"
