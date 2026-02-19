@@ -100,6 +100,11 @@ def getGuagesByQRCodes(img):
                 f"One of the guges {guage} from assigned {idsAssigned} did not have a bottom or top QR: {qrCodeInfos}"
             )
         guages.append(guage)
+        # Sort gauges by the average x-coordinate of their top and bottom QR codes to ensure left-to-right order
+        guages.sort(key=lambda g: (
+            (g["topQr"]["upperLeftPoint"][0] + g["topQr"]["upperRightPoint"][0] +
+             g["bottomQr"]["lowerLeftPoint"][0] + g["bottomQr"]["lowerRightPoint"][0]) / 4
+        ))
     return guages
 
 
