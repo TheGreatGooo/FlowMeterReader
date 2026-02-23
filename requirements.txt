@@ -3,3 +3,5 @@ numpy
 matplotlib
 qreader
 paho-mqtt
+ruff
+requests

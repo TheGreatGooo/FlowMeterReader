@@ -5,6 +5,7 @@ import argparse
 import time
 import json
 import paho.mqtt.client as mqtt
+import requests
 
 
 def does_range_overlap(startX1, endX1, startX2, endX2):
@@ -101,10 +102,17 @@ def getGuagesByQRCodes(img):
             )
         guages.append(guage)
         # Sort gauges by the average x-coordinate of their top and bottom QR codes to ensure left-to-right order
-        guages.sort(key=lambda g: (
-            (g["topQr"]["upperLeftPoint"][0] + g["topQr"]["upperRightPoint"][0] +
-             g["bottomQr"]["lowerLeftPoint"][0] + g["bottomQr"]["lowerRightPoint"][0]) / 4
-        ))
+        guages.sort(
+            key=lambda g: (
+                (
+                    g["topQr"]["upperLeftPoint"][0]
+                    + g["topQr"]["upperRightPoint"][0]
+                    + g["bottomQr"]["lowerLeftPoint"][0]
+                    + g["bottomQr"]["lowerRightPoint"][0]
+                )
+                / 4
+            )
+        )
     return guages
 
 
@@ -194,8 +202,8 @@ def getGuageTracks(guages):
 
 
 def indicatorSizeUsingEdge(startX, endX, yMid, edges):
-    startIdx = -1
-    endIdx = -1
+    startIdx = -1  # noqa: F841
+    endIdx = -1  # noqa: F841
     indicatorSize = 0
     xCoords = startX
     while xCoords < endX and xCoords < len(edges[0]):
@@ -213,8 +221,8 @@ def indicatorSizeUsingEdge(startX, endX, yMid, edges):
 
 
 def indicatorSizeUsingContinuous(startX, endX, yMid, bit_not):
-    startIdx = -1
-    endIdx = -1
+    startIdx = -1  # noqa: F841
+    endIdx = -1  # noqa: F841
     indicatorSize = 0
     xCoords = startX
     while xCoords < endX and xCoords < len(bit_not[0]):
@@ -226,8 +234,8 @@ def indicatorSizeUsingContinuous(startX, endX, yMid, bit_not):
         else:
             if endIdx - startIdx > indicatorSize:
                 indicatorSize = endIdx - startIdx
-            startIdx = -1
-            endIdx = -1
+            startIdx = -1  # noqa: F841
+            endIdx = -1  # noqa: F841
         xCoords = xCoords + 1
     return indicatorSize
 
@@ -304,8 +312,18 @@ def processFrame(img, aproxIndicatorLength=600):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="FlowMeterReader RTSP to MQTT")
-    parser.add_argument("--rtsp", required=True, help="RTSP stream URL")
+    parser = argparse.ArgumentParser(description="FlowMeterReader HTTP Image to MQTT")
+    parser.add_argument(
+        "--url",
+        required=True,
+        help="HTTP URL to fetch JPEG image (e.g., http://192.168.49.171/image.jpg)",
+    )
+    parser.add_argument(
+        "--username", default=None, help="Basic auth username for HTTP image URL"
+    )
+    parser.add_argument(
+        "--password", default=None, help="Basic auth password for HTTP image URL"
+    )
     parser.add_argument(
         "--interval", type=float, default=1.0, help="Interval between frames in seconds"
     )
@@ -320,31 +338,47 @@ def main():
     client.connect(args.broker, args.port, 60)
     client.loop_start()
 
-    cap = cv.VideoCapture(args.rtsp)
-    if not cap.isOpened():
-        print("Failed to open RTSP stream")
+    def fetch_image():
+        auth = (
+            (args.username, args.password) if args.username and args.password else None
+        )  # noqa: F841
+        try:
+            response = requests.get(args.url, auth=auth, timeout=5)
+            response.raise_for_status()
+            img_array = np.frombuffer(response.content, np.uint8)
+            img = cv.imdecode(img_array, cv.IMREAD_COLOR)
+            return img
+        except Exception as e:
+            print(f"Failed to fetch image: {e}")
+            return None
+
+    # Initial fetch to verify URL
+    frame = fetch_image()
+    if frame is None:
+        print("Failed to retrieve initial image")
         return
 
     try:
         while True:
-            ret, frame = cap.read()
-            if not ret:
-                print("Failed to read frame")
+            frame = fetch_image()
+            if frame is None:
+                print("Failed to fetch image")
                 break
             guage_tracks = processFrame(frame)
-            payload = json.dumps(
-                [
-                    {"id": i, "percent": str(gt.get("percent", None))}
-                    for i, gt in enumerate(guage_tracks)
-                ]
-            )
-            print(f"{str(round(guage_tracks[0].get("percent", None),2))},{str(round(guage_tracks[1].get("percent", None),2))},{str(round(guage_tracks[2].get("percent", None),2))}")
-            client.publish(args.topic, payload)
-            time.sleep(args.interval)
+        payload = json.dumps(
+            [
+                {"id": i, "percent": str(gt.get("percent", None))}
+                for i, gt in enumerate(guage_tracks)
+            ]
+        )
+        print(
+            f"{str(round(guage_tracks[0].get('percent', None), 2))},{str(round(guage_tracks[1].get('percent', None), 2))},{str(round(guage_tracks[2].get('percent', None), 2))}"
+        )
+        client.publish(args.topic, payload)
+        time.sleep(args.interval)
     except KeyboardInterrupt:
         print("Interrupted by user")
     finally:
-        cap.release()
         client.loop_stop()
         client.disconnect()
 

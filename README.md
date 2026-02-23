@@ -2,7 +2,7 @@
 Covert verical flow guages from a webcam feed into numerical representation.
 
 ## Features
-- Read frames from an RTSP video stream
+- Fetch JPEG images over HTTP (supports basic authentication)
 - Process each frame to compute gauge percentages
 - Publish results to an MQTT topic at configurable intervals
 - Command‑line interface for easy configuration
@@ -14,17 +14,19 @@ Covert verical flow guages from a webcam feed into numerical representation.
 Run the script with required arguments:
 
 ```bash
-python FlowMeterReader.py --rtsp <RTSP_URL> --broker <MQTT_BROKER> --topic <MQTT_TOPIC> [--interval <SECONDS>] [--port <PORT>]
+python FlowMeterReader.py --url <IMAGE_URL> [--username <USER>] [--password <PASS>] --broker <MQTT_BROKER> --topic <MQTT_TOPIC> [--interval <SECONDS>] [--port <PORT>]
 ```
 
 Arguments:
-- `--rtsp` : RTSP stream URL (required)
+- `--url` : HTTP URL to fetch JPEG image (required)
+- `--username` : Basic auth username (optional)
+- `--password` : Basic auth password (optional)
 - `--broker` : MQTT broker address (required)
 - `--topic` : MQTT topic to publish gauge percentages (required)
 - `--interval` : Seconds between processing frames (default 1.0)
 - `--port` : MQTT broker port (default 1883)
 
-The script reads frames from the RTSP stream, processes them to compute gauge percentages, and publishes a JSON payload like:
+The script fetches images from the provided HTTP URL, processes them to compute gauge percentages, and publishes a JSON payload like:
 ```json
 [{"id":0,"percent":12.3},{"id":1,"percent":45.6}]
 ```
