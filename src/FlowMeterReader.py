@@ -7,6 +7,7 @@ import json
 import paho.mqtt.client as mqtt
 import requests
 import logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
 
 def does_range_overlap(startX1, endX1, startX2, endX2):
@@ -336,10 +337,12 @@ def main():
         "--topic", required=True, help="MQTT topic to publish gauge percentages"
     )
     args = parser.parse_args()
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
+    logging.debug(f"Parsed arguments: {args}")
+    # Logging is configured at the top of the file
 
     client = mqtt.Client()
     client.connect(args.broker, args.port, 60)
+    logging.debug(f"Connected to MQTT broker {args.broker}:{args.port}")
     client.loop_start()
 
     def fetch_image():
@@ -369,17 +372,18 @@ def main():
                 logging.warning("Failed to fetch image")
                 break
             guage_tracks = processFrame(frame)
-        payload = json.dumps(
-            [
-                {"id": i, "percent": str(gt.get("percent", None))}
-                for i, gt in enumerate(guage_tracks)
-            ]
-        )
-        logging.info(
-            f"{str(round(guage_tracks[0].get('percent', None), 2))},{str(round(guage_tracks[1].get('percent', None), 2))},{str(round(guage_tracks[2].get('percent', None), 2))}"
-        )
-        client.publish(args.topic, payload)
-        time.sleep(args.interval)
+            logging.debug(f"Processed frame, obtained {len(guage_tracks)} gauge tracks")
+            payload = json.dumps(
+                [
+                    {"id": i, "percent": str(gt.get("percent", None))}
+                    for i, gt in enumerate(guage_tracks)
+                ]
+            )
+            logging.info(
+                f"{str(round(guage_tracks[0].get('percent', None), 2))},{str(round(guage_tracks[1].get('percent', None), 2))},{str(round(guage_tracks[2].get('percent', None), 2))}"
+            )
+            client.publish(args.topic, payload)
+            time.sleep(args.interval)
     except KeyboardInterrupt:
         logging.info("Interrupted by user")
     finally:
