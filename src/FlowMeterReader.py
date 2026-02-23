@@ -7,7 +7,7 @@ import json
 import paho.mqtt.client as mqtt
 import requests
 import logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 
 def does_range_overlap(startX1, endX1, startX2, endX2):
@@ -53,7 +53,7 @@ def getGuagesByQRCodes(img):
     if len(qrcodes) != 6:
         raise Exception("Less than 6 qr codes detected")
     else:
-        logging.info("Found 6 QR guages")
+        logging.debug("Found 6 QR guages")
     for qrcode in qrcodes:
         qrcodeCoords = qrcode["quad_xy"]
         (
