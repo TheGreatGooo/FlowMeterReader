@@ -6,6 +6,7 @@ import time
 import json
 import paho.mqtt.client as mqtt
 import requests
+import logging
 
 
 def does_range_overlap(startX1, endX1, startX2, endX2):
@@ -50,6 +51,8 @@ def getGuagesByQRCodes(img):
     id = 0
     if len(qrcodes) != 6:
         raise Exception("Less than 6 qr codes detected")
+    else:
+        logging.info("Found 6 QR guages")
     for qrcode in qrcodes:
         qrcodeCoords = qrcode["quad_xy"]
         (
@@ -270,7 +273,7 @@ def processFrame(img, aproxIndicatorLength=600):
 
     guages = getGuagesByQRCodes(img)
     guageTracks = getGuageTracks(guages)
-
+    logging.debug(f"Got gauge tracks {len(guageTracks)}")
     for guageTrack in guageTracks:
         coefficients = np.polyfit(
             [guageTrack["bottomPoint"][0], guageTrack["topPoint"][0]],
@@ -333,6 +336,7 @@ def main():
         "--topic", required=True, help="MQTT topic to publish gauge percentages"
     )
     args = parser.parse_args()
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
     client = mqtt.Client()
     client.connect(args.broker, args.port, 60)
@@ -349,20 +353,20 @@ def main():
             img = cv.imdecode(img_array, cv.IMREAD_COLOR)
             return img
         except Exception as e:
-            print(f"Failed to fetch image: {e}")
+            logging.error(f"Failed to fetch image: {e}")
             return None
 
     # Initial fetch to verify URL
     frame = fetch_image()
     if frame is None:
-        print("Failed to retrieve initial image")
+        logging.error("Failed to retrieve initial image")
         return
 
     try:
         while True:
             frame = fetch_image()
             if frame is None:
-                print("Failed to fetch image")
+                logging.warning("Failed to fetch image")
                 break
             guage_tracks = processFrame(frame)
         payload = json.dumps(
@@ -371,13 +375,13 @@ def main():
                 for i, gt in enumerate(guage_tracks)
             ]
         )
-        print(
+        logging.info(
             f"{str(round(guage_tracks[0].get('percent', None), 2))},{str(round(guage_tracks[1].get('percent', None), 2))},{str(round(guage_tracks[2].get('percent', None), 2))}"
         )
         client.publish(args.topic, payload)
         time.sleep(args.interval)
     except KeyboardInterrupt:
-        print("Interrupted by user")
+        logging.info("Interrupted by user")
     finally:
         client.loop_stop()
         client.disconnect()
